@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="light">
+<title>Заказ пропуска на склад</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#efece3;
+    --card:#fbfaf6;
+    --ink:#20242b;
+    --ink-soft:#5b6270;
+    --navy:#28394a;
+    --navy-deep:#1b2733;
+    --stamp:#a33327;
+    --stamp-dark:#812820;
+    --line:#cfc9b8;
+    --line-soft:#e2ddcd;
+    --ok:#3d6b4f;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      radial-gradient(rgba(32,36,43,0.035) 1px, transparent 1px);
+    background-size:14px 14px;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 64px;
+  }
+
+  .ticket{
+    width:100%;
+    max-width:520px;
+    background:var(--card);
+    border:1px solid var(--line);
+    box-shadow:0 1px 0 rgba(32,36,43,0.04), 0 18px 40px -24px rgba(27,39,51,0.35);
+  }
+
+  .band{
+    background:var(--navy);
+    background-image:linear-gradient(160deg, var(--navy), var(--navy-deep));
+    color:#f2ede0;
+    padding:22px 24px 20px;
+  }
+
+  .band .kicker{
+    font-size:11px;
+    letter-spacing:0.14em;
+    color:#b9c3cd;
+  }
+
+  .band h1{
+    font-family:'PT Serif', serif;
+    font-weight:700;
+    font-size:26px;
+    line-height:1.15;
+    margin:6px 0 4px;
+  }
+
+  .band .sub{
+    font-size:12.5px;
+    color:#c7cfd6;
+    line-height:1.4;
+  }
+
+  .perf{
+    position:relative;
+    height:0;
+    border-top:2px dashed var(--line);
+    margin:0 0;
+  }
+  .perf::before,.perf::after{
+    content:"";
+    position:absolute;
+    top:-9px;
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background:var(--paper);
+  }
+  .perf::before{ left:-9px; }
+  .perf::after{ right:-9px; }
+
+  .body{
+    padding:24px;
+  }
+
+  .field{
+    margin-bottom:18px;
+  }
+
+  .field label{
+    display:block;
+    font-size:11.5px;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+
+  .field label .req{
+    color:var(--stamp);
+  }
+
+  .field input{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    padding:10px 11px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+    border-radius:2px;
+  }
+
+  .field input:focus{
+    outline:none;
+    border-color:var(--navy);
+    box-shadow:0 0 0 3px rgba(40,57,74,0.10);
+  }
+
+  .field.pair{
+    display:flex;
+    gap:12px;
+  }
+  .field.pair > div{ flex:1; }
+
+  .hint{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:5px;
+    line-height:1.4;
+  }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:22px;
+  }
+
+  button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    font-weight:600;
+    letter-spacing:0.01em;
+    padding:12px 14px;
+    border-radius:2px;
+    border:1px solid transparent;
+    cursor:pointer;
+  }
+
+  .btn-primary{
+    flex:1;
+    background:var(--stamp);
+    background-image:linear-gradient(160deg, var(--stamp), var(--stamp-dark));
+    color:#fbf6ee;
+  }
+  .btn-primary:hover{ filter:brightness(1.04); }
+  .btn-primary:active{ transform:translateY(1px); }
+
+  .btn-ghost{
+    background:transparent;
+    color:var(--ink-soft);
+    border-color:var(--line);
+  }
+  .btn-ghost:hover{ border-color:var(--ink-soft); color:var(--ink); }
+
+  .error{
+    font-size:12px;
+    color:var(--stamp);
+    margin-top:10px;
+    display:none;
+  }
+
+  .result{
+    display:none;
+  }
+  .result.show{ display:block; }
+
+  .result-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-top:6px;
+    margin-bottom:12px;
+  }
+
+  .result-head .stamp-label{
+    font-size:11px;
+    letter-spacing:0.12em;
+    color:var(--ok);
+  }
+
+  table.preview{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-bottom:18px;
+  }
+  table.preview td{
+    padding:8px 4px;
+    border-bottom:1px solid var(--line-soft);
+    vertical-align:top;
+  }
+  table.preview tr:last-child td{ border-bottom:none; }
+  table.preview td.k{
+    color:var(--ink-soft);
+    width:44%;
+    padding-right:12px;
+  }
+  table.preview td.v{
+    color:var(--ink);
+    font-weight:500;
+  }
+
+  .subject-chip{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:#fff;
+    border:1px dashed var(--line);
+    padding:12px 13px;
+    font-size:12px;
+    color:var(--ink-soft);
+    border-radius:2px;
+    cursor:pointer;
+    margin-bottom:14px;
+  }
+  .subject-chip .lbl{
+    display:block;
+    font-size:10.5px;
+    letter-spacing:0.08em;
+    margin-bottom:5px;
+  }
+  .subject-chip .val{
+    color:var(--ink);
+    font-size:14px;
+    font-weight:600;
+  }
+  .subject-chip.copied{
+    border-color:var(--ok);
+  }
+  .subject-chip.copied .val::after{
+    content:" ✓ скопировано";
+    color:var(--ok);
+    font-weight:500;
+  }
+
+  .send-row{
+    display:flex;
+    gap:10px;
+  }
+
+  .btn-copy-table{
+    flex:1;
+    background:#fff;
+    color:var(--navy);
+    border-color:var(--navy);
+  }
+  .btn-copy-table.copied{
+    border-color:var(--ok);
+    color:var(--ok);
+  }
+
+  .btn-send{
+    flex:1;
+    background:var(--navy);
+    background-image:linear-gradient(160deg, var(--navy), var(--navy-deep));
+    color:#f2ede0;
+    text-decoration:none;
+    text-align:center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .foot-note{
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-top:16px;
+    line-height:1.5;
+  }
+
+  .foot-note b{ color:var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="ticket">
+
+  <div class="band">
+    <div class="kicker">СКЛАД РИМА · ЗАЯВКА НА ПРОХОД</div>
+    <h1>Заказ пропуска на склад</h1>
+    <div class="sub">Заполните данные визита — заявка соберётся в таблицу для e‑mail</div>
+  </div>
+
+  <div class="perf"></div>
+
+  <div class="body">
+
+    <div class="field">
+      <label for="f-date">Дата визита <span class="req">*</span></label>
+      <input type="date" id="f-date">
+    </div>
+
+    <div class="field">
+      <label for="f-name">ФИО посетителя <span class="req">*</span></label>
+      <input type="text" id="f-name" placeholder="Владимир Петров" autocomplete="off">
+    </div>
+
+    <div class="field pair">
+      <div>
+        <label for="f-plate">Гос. номер автомобиля <span class="req">*</span></label>
+        <input type="text" id="f-plate" placeholder="Р108РК46" autocomplete="off">
+      </div>
+      <div>
+        <label for="f-brand">Марка автомобиля <span class="req">*</span></label>
+        <input type="text" id="f-brand" placeholder="Ситроен" autocomplete="off">
+      </div>
+    </div>
+    <div class="hint" style="margin-top:-10px; margin-bottom:18px;">В заявке объединится как «Номер, марка»</div>
+
+    <div class="actions">
+      <button class="btn-primary" id="btn-build">Сформировать заявку</button>
+      <button class="btn-ghost" id="btn-reset">Сбросить</button>
+    </div>
+
+    <div class="error" id="error">Заполните все обязательные поля.</div>
+
+    <div class="perf" style="margin-top:22px;"></div>
+
+    <div class="result" id="result">
+
+      <div class="result-head">
+        <span class="stamp-label">● ЗАЯВКА СФОРМИРОВАНА</span>
+      </div>
+
+      <table class="preview" id="preview"></table>
+
+      <button class="subject-chip" id="subject-chip" title="Нажмите, чтобы скопировать">
+        <span class="lbl">ТЕМА ПИСЬМА (нажмите для копирования)</span>
+        <span class="val" id="subject-val"></span>
+      </button>
+
+      <div class="send-row">
+        <button class="btn-copy-table" id="btn-copy-table">Скопировать таблицу</button>
+        <a class="btn-send" id="btn-send" href="#">Отправить письмо</a>
+      </div>
+
+      <div class="foot-note">
+        Кнопка «Отправить письмо» откроет ваш почтовый клиент с адресом получателя и темой. Тело письма пустое — вставьте скопированную таблицу вручную (Ctrl+V / ⌘V).
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const RECIPIENT = "EMC-GO@gkm.ru";
+
+  const FIXED = {
+    org: "РИМА",
+    purpose: "Сотрудник",
+    toWhom: "Силуянов Виталий Юрьевич",
+    room: "Склад",
+    passengers: "нет"
+  };
+
+  const els = {
+    date: document.getElementById('f-date'),
+    name: document.getElementById('f-name'),
+    plate: document.getElementById('f-plate'),
+    brand: document.getElementById('f-brand'),
+    buildBtn: document.getElementById('btn-build'),
+    resetBtn: document.getElementById('btn-reset'),
+    error: document.getElementById('error'),
+    result: document.getElementById('result'),
+    preview: document.getElementById('preview'),
+    subjectChip: document.getElementById('subject-chip'),
+    subjectVal: document.getElementById('subject-val'),
+    copyTableBtn: document.getElementById('btn-copy-table'),
+    sendBtn: document.getElementById('btn-send')
+  };
+
+  function formatDate(iso){
+    if(!iso) return "";
+    const [y,m,d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
+
+  function buildRows(){
+    const dateStr = formatDate(els.date.value);
+    const name = els.name.value.trim();
+    const plate = els.plate.value.trim();
+    const brand = els.brand.value.trim();
+    const car = `${plate}, ${brand}`;
+
+    return [
+      ["Организация (в которую прибывает посетитель)", FIXED.org],
+      ["Дата визита", dateStr],
+      ["ФИО посетителя", name],
+      ["Цель визита", FIXED.purpose],
+      ["К кому", FIXED.toWhom],
+      ["Номер кабинета", FIXED.room],
+      ["Автомобиль", car],
+      ["Пассажиры", FIXED.passengers]
+    ];
+  }
+
+  function validate(){
+    return els.date.value && els.name.value.trim() && els.plate.value.trim() && els.brand.value.trim();
+  }
+
+  function renderPreview(rows){
+    els.preview.innerHTML = rows.map(([k,v]) =>
+      `<tr><td class="k">${escapeHtml(k)}</td><td class="v">${escapeHtml(v)}</td></tr>`
+    ).join('');
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[s]));
+  }
+
+  function tableToHtml(rows){
+    const trs = rows.map(([k,v]) =>
+      `<tr><td style="padding:6px 10px;border:1px solid #ccc;color:#555;">${escapeHtml(k)}</td><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;">${escapeHtml(v)}</td></tr>`
+    ).join('');
+    return `<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">${trs}</table>`;
+  }
+
+  function tableToPlain(rows){
+    return rows.map(([k,v]) => `${k}: ${v}`).join('\n');
+  }
+
+  let currentRows = [];
+  let currentSubject = "";
+
+  els.buildBtn.addEventListener('click', () => {
+    if(!validate()){
+      els.error.style.display = 'block';
+      els.result.classList.remove('show');
+      return;
+    }
+    els.error.style.display = 'none';
+
+    currentRows = buildRows();
+    currentSubject = `Пропуск курьер - ${els.plate.value.trim()}`;
+
+    renderPreview(currentRows);
+    els.subjectVal.textContent = currentSubject;
+    els.subjectChip.classList.remove('copied');
+    els.copyTableBtn.classList.remove('copied');
+    els.copyTableBtn.textContent = 'Скопировать таблицу';
+
+    const mailto = `mailto:${RECIPIENT}?subject=${encodeURIComponent(currentSubject)}`;
+    els.sendBtn.setAttribute('href', mailto);
+
+    els.result.classList.add('show');
+    els.result.scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+
+  els.resetBtn.addEventListener('click', () => {
+    els.date.value = '';
+    els.name.value = '';
+    els.plate.value = '';
+    els.brand.value = '';
+    els.error.style.display = 'none';
+    els.result.classList.remove('show');
+  });
+
+  els.subjectChip.addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(currentSubject);
+      els.subjectChip.classList.add('copied');
+    }catch(e){
+      fallbackCopy(currentSubject);
+      els.subjectChip.classList.add('copied');
+    }
+  });
+
+  els.copyTableBtn.addEventListener('click', async () => {
+    const html = tableToHtml(currentRows);
+    const plain = tableToPlain(currentRows);
+    try{
+      if(window.ClipboardItem){
+        const item = new ClipboardItem({
+          'text/html': new Blob([html], {type:'text/html'}),
+          'text/plain': new Blob([plain], {type:'text/plain'})
+        });
+        await navigator.clipboard.write([item]);
+      } else {
+        await navigator.clipboard.writeText(plain);
+      }
+      els.copyTableBtn.classList.add('copied');
+      els.copyTableBtn.textContent = '✓ Скопировано';
+      setTimeout(() => {
+        els.copyTableBtn.classList.remove('copied');
+        els.copyTableBtn.textContent = 'Скопировать таблицу';
+      }, 2000);
+    }catch(e){
+      fallbackCopy(plain);
+      els.copyTableBtn.textContent = '✓ Скопировано (текст)';
+    }
+  });
+
+  function fallbackCopy(text){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+</script>
+
+</body>
+</html>
