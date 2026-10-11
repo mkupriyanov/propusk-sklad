@@ -175,6 +175,52 @@
   }
   .btn-ghost:hover{ border-color:var(--ink-soft); color:var(--ink); }
 
+
+  .clip-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 13px;
+    border:1px dashed var(--line);
+    background:#fff;
+    margin-bottom:20px;
+    cursor:pointer;
+    user-select:none;
+    position:relative;
+  }
+  .clip-row input{ position:absolute; opacity:0; pointer-events:none; }
+  .switch{
+    flex:none;
+    width:42px; height:24px;
+    border-radius:12px;
+    background:#c9c3b2;
+    position:relative;
+    transition:background .15s;
+  }
+  .switch::after{
+    content:"";
+    position:absolute;
+    top:3px; left:3px;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:#fff;
+    transition:transform .15s;
+    box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .clip-row input:checked + .switch{ background:var(--stamp); }
+  .clip-row input:checked + .switch::after{ transform:translateX(18px); }
+  .clip-row input:focus-visible + .switch{ box-shadow:0 0 0 3px rgba(40,57,74,0.2); }
+  .clip-text{ font-size:13px; line-height:1.35; }
+  .clip-text small{ display:block; color:var(--ink-soft); font-size:11px; margin-top:2px; }
+  .clip-msg{
+    display:none;
+    font-size:12px;
+    color:var(--stamp);
+    margin:-10px 0 18px;
+    line-height:1.4;
+  }
+  .field input[readonly]{ background:#f1eee4; color:var(--ink-soft); }
+
   .error{
     font-size:12px;
     color:var(--stamp);
@@ -308,6 +354,15 @@
 
   <div class="body">
 
+    <label class="clip-row" for="f-clip">
+      <input type="checkbox" id="f-clip">
+      <span class="switch"></span>
+      <span class="clip-text">Взять данные авто из буфера (Яндекс)
+        <small>Номер и марка подставятся из скопированной строки, ФИО — «Курьер»</small>
+      </span>
+    </label>
+    <div class="clip-msg" id="clip-msg"></div>
+
     <div class="field">
       <label for="f-date">Дата визита <span class="req">*</span></label>
       <input type="date" id="f-date">
@@ -433,6 +488,56 @@
     }
   });
 
+
+  const clipToggle = document.getElementById('f-clip');
+  const clipMsg = document.getElementById('clip-msg');
+
+  function showClipMsg(text){
+    clipMsg.textContent = text;
+    clipMsg.style.display = text ? 'block' : 'none';
+  }
+
+  async function fillFromClipboard(){
+    showClipMsg('');
+    let text = '';
+    try{
+      text = (await navigator.clipboard.readText()) || '';
+    }catch(e){
+      clipToggle.checked = false;
+      els.name.readOnly = false;
+      showClipMsg('Браузер не дал доступ к буферу обмена. Разрешите доступ и включите переключатель ещё раз.');
+      return;
+    }
+    text = text.replace(/\s+/g, ' ').trim();
+    if(!text){
+      clipToggle.checked = false;
+      els.name.readOnly = false;
+      showClipMsg('Буфер обмена пуст. Сначала скопируйте данные автомобиля в буфер обмена.');
+      return;
+    }
+    const idx = text.indexOf(' ');
+    const plate = idx === -1 ? text : text.slice(0, idx);
+    const brand = idx === -1 ? '' : text.slice(idx + 1).trim();
+
+    els.name.value = 'Курьер';
+    els.name.readOnly = true;
+    els.plate.value = plate;
+    els.brand.value = brand;
+    autofilledPlate = '';
+    autofilledBrand = '';
+    if(!brand) showClipMsg('В буфере найден только номер — марку впишите вручную.');
+  }
+
+  clipToggle.addEventListener('change', () => {
+    if(clipToggle.checked){
+      fillFromClipboard();
+    } else {
+      showClipMsg('');
+      els.name.readOnly = false;
+      if(els.name.value === 'Курьер') els.name.value = '';
+    }
+  });
+
   function formatDate(iso){
     if(!iso) return "";
     const [y,m,d] = iso.split('-');
@@ -517,6 +622,9 @@
     els.name.value = '';
     els.plate.value = '';
     els.brand.value = '';
+    clipToggle.checked = false;
+    els.name.readOnly = false;
+    showClipMsg('');
     els.error.style.display = 'none';
     els.result.classList.remove('show');
   });
