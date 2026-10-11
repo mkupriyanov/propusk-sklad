@@ -315,7 +315,9 @@
 
     <div class="field">
       <label for="f-name">ФИО посетителя <span class="req">*</span></label>
-      <input type="text" id="f-name" placeholder="Владимир Петров" autocomplete="off">
+      <input type="text" id="f-name" list="visitor-list" placeholder="Начните вводить или выберите из списка" autocomplete="off">
+      <datalist id="visitor-list"></datalist>
+      <div class="hint" id="visitor-hint">Список подгружается…</div>
     </div>
 
     <div class="field pair">
@@ -392,6 +394,44 @@
     copyTableBtn: document.getElementById('btn-copy-table'),
     sendBtn: document.getElementById('btn-send')
   };
+
+  let VISITORS = [];
+  let autofilledPlate = "";
+  let autofilledBrand = "";
+  const visitorHint = document.getElementById('visitor-hint');
+  const visitorList = document.getElementById('visitor-list');
+
+  async function loadVisitors(){
+    try{
+      const res = await fetch('visitors.json', {cache:'no-store'});
+      if(!res.ok) throw new Error('no file');
+      VISITORS = await res.json();
+      visitorList.innerHTML = VISITORS.map(v => `<option value="${escapeHtml(v.name)}">`).join('');
+      visitorHint.textContent = 'Выберите из списка — номер и марка подставятся сами. Нет в списке — впишите ФИО, номер и марку вручную.';
+    }catch(e){
+      visitorHint.textContent = 'Список посетителей не найден — заполните ФИО, номер и марку вручную.';
+    }
+  }
+  loadVisitors();
+
+  els.name.addEventListener('input', () => {
+    const typed = els.name.value.trim().toLowerCase();
+    const match = VISITORS.find(v => v.name.trim().toLowerCase() === typed);
+    if(match){
+      // only overwrite fields the user hasn't since hand-edited away from the last autofill
+      if(!els.plate.value.trim() || els.plate.value.trim() === autofilledPlate){
+        els.plate.value = match.plate;
+        autofilledPlate = match.plate;
+      }
+      if(!els.brand.value.trim() || els.brand.value.trim() === autofilledBrand){
+        els.brand.value = match.brand;
+        autofilledBrand = match.brand;
+      }
+    } else {
+      autofilledPlate = "";
+      autofilledBrand = "";
+    }
+  });
 
   function formatDate(iso){
     if(!iso) return "";
